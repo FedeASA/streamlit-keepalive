@@ -1,0 +1,32 @@
+name: Keep Streamlit apps awake
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"   # cada 2 horas (UTC)
+  workflow_dispatch:         # permite correrlo a mano desde la pestaña Actions
+
+permissions:
+  actions: write             # necesario para el paso de keepalive del workflow
+
+jobs:
+  wake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Instalar Playwright
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Despertar apps
+        run: python wake.py
+
+      # GitHub desactiva los workflows programados tras 60 días sin actividad en el repo.
+      # Esto lo mantiene habilitado sin hacer commits.
+      - uses: liskin/gh-workflow-keepalive@v1
