@@ -1,0 +1,29 @@
+name: Rebuild PrestaShop search index
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"   # cada 12 horas (00:00 y 12:00 UTC)
+  workflow_dispatch:         # permite correrlo a mano desde la pestaña Actions
+
+permissions:
+  actions: write             # necesario para el paso de keepalive del workflow
+
+jobs:
+  rebuild-index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Llamar al cron de reconstrucción del índice
+        env:
+          # La URL lleva el token de admin: se guarda como secret, no en el repo.
+          SEARCH_CRON_URL: ${{ secrets.PRESTASHOP_SEARCH_CRON_URL }}
+        run: |
+          if [ -z "$SEARCH_CRON_URL" ]; then
+            echo "Falta el secret PRESTASHOP_SEARCH_CRON_URL"; exit 1
+          fi
+          curl -fsS --max-time 1800 --retry 2 --retry-delay 30 \
+            -o response.txt -w "HTTP %{http_code} en %{time_total}s\n" "$SEARCH_CRON_URL"
+          head -c 500 response.txt; echo
+
+      - uses: actions/checkout@v4
+      - uses: liskin/gh-workflow-keepalive@v1
